@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import sys
 
 try:
     from configobj import ConfigObj
 except:
-    print "[x] Error - You need to have configobj installed to use this tool"
+    print("[x] Error - You need to have configobj installed to use this tool")
     exit(-1)
 from encryption import otp_full
 from encryption import otp_key
@@ -20,17 +20,17 @@ class make_payload():
         self.inital_iteration = 0
         self.config = ConfigObj(config)
         #print self.payload.encode('hex')
-        self.parse_config()
+    #    self.parse_config()
         self.main()
 
     def parse_config(self):
-        for item in self.config:
+       for item in self.config.encode('utf-8'):
             #print item, ":", self.config[item]
             pass
 
     def main(self):
         if self.config['Overall']['Encryption_Type'].lower() == 'otp' and self.config['otp_settings']['otp_type'] == 'full':
-            print '[*] Using full file OTP'
+            print("[*] Using full file OTP")
             pad = self.config['otp_settings']['pad']
             otp_type = self.config['otp_settings']['otp_type']
             byte_width = self.config['otp_settings']['byte_width']
@@ -43,7 +43,7 @@ class make_payload():
             otp_full.otp_full(pad, self.payload, byte_width, otp_type, payload_type, minus_bytes, scan_dir, output_type, pad_max,clean_output)
         
         elif self.config['Overall']['Encryption_Type'].lower() == 'otp' and self.config['otp_settings']['otp_type'].lower() == 'key':
-            print '[*] Using key based OTP'
+            print("[*] Using key based OTP")
             pad = self.config['otp_settings']['pad']
             otp_type = self.config['otp_settings']['otp_type']
             payload_type = self.config['Overall']['payload_type'].lower()
@@ -56,7 +56,7 @@ class make_payload():
             otp_key.otp_key(pad, self.payload, otp_type, payload_type, minus_bytes, scan_dir, output_type, key_iterations, pad_max, clean_output)
         
         elif self.config['Overall']['Encryption_Type'].lower() == 'env':
-            print '[*] Using Symmetric encryption'
+            print("[*] Using Symmetric encryption")
             key_config = self.config['symmetric_settings_win']
             payload_type = self.config['Overall']['payload_type'].lower()
             minus_bytes = int(self.config['Overall']['minus_bytes'])
@@ -69,7 +69,7 @@ class make_payload():
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print "Usage:", sys.argv[0], "input_file_to_encode", "config"
+        print("Usage:", sys.argv[0], "input_file_to_encode", "config")
         exit(-1)
     
     test = make_payload(sys.argv[1], sys.argv[2])

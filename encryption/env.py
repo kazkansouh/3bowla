@@ -8,11 +8,10 @@ import random
 import textwrap
 import os
 import platform
-import StringIO
 import binascii
 from Crypto.Cipher import AES
 from Crypto import Random
-
+from io import StringIO
 from templates.python.payloads import pe_exe
 from templates.python.payloads import win_shellcode
 from templates.python.payloads import code
@@ -49,7 +48,7 @@ class env_encrypt:
         self.org_payload = payload
         self.config = config
         self.payload = open(payload, 'rb').read()
-        print "[*] Payload length", len(self.payload)
+        print("[*] Payload length", len(self.payload))
         self.lookup_table = ''
         self.payload_type = payload_type
         self.minus_bytes = int(minus_bytes)
@@ -69,7 +68,7 @@ class env_encrypt:
         self.set_payload()
         if output_type in ['python', 'both']:
             if 'dll' in self.payload_type.lower():
-                print "[X] No DLL Support for python"
+                print("[X] No DLL Support for python")
                 sys.exit(-1)
         self.hash_payload()
         self.populate_variables()
@@ -83,16 +82,16 @@ class env_encrypt:
             
         
     def set_payload(self):
-        print "[*] Payload_type", self.payload_type
+        print("[*] Payload_type", self.payload_type)
         if self.payload_type == "shellcode":
-            print '[*] Using shellcode payload template' 
+            print('[*] Using shellcode payload template')
             self.payload_loader = win_shellcode.loader
             self.go_payload_loader = go_win_shellcode.loader
             self.payload_imports = go_win_shellcode.imports
             self.ps_payload_loader = ps_win_shellcode.loader
 
         elif self.payload_type == "exe":
-            print '[*] Using EXE payload template' 
+            print('[*] Using EXE payload template')
             self.payload_loader = pe_exe.loader
             self.go_payload_loader = go_memorymodule.loader
             self.payload_imports = go_memorymodule.imports
@@ -100,14 +99,14 @@ class env_encrypt:
             
         elif self.payload_type == "dll_x86":
             # go memory module
-            print '[*] Using x86 dll payload template' 
+            print('[*] Using x86 dll payload template')
             #self.payload_loader = pe_dll_x86.loader
             self.go_payload_loader = go_memorymodule.loader
             self.payload_imports = go_memorymodule.imports
             self.ps_payload_loader = ps_dll_exe.loader
             
         elif self.payload_type == "dll_x64":
-            print "[*] Using x64 dll payload tempate"
+            print("[*] Using x64 dll payload tempate")
             #self.payload_loader = pe_dll_x64.loader
             # go memory module
             self.go_payload_loader = go_memorymodule.loader
@@ -141,7 +140,7 @@ class env_encrypt:
         self.env_vars = []
         
         self.used_path_string = {}
-        self.path_string = ''
+        self.path_string = ''.encode('utf-8')
         
         self.start_loc = ''
 
@@ -175,13 +174,13 @@ class env_encrypt:
 
 
         if self.used_env_strings == {}:
-            print "[!] Environment variables not used as part of key"
+            print("[!] Environment variables not used as part of key")
         else:
 
-            print "[*] Used environment variables:"
+            print("[*] Used environment variables:")
             
             for key, value in sorted(self.used_env_strings.items()):
-                print "\t[-] environment value used: {0}, value used: {1}".format(key, value)
+                print("\t[-] environment value used: {0}, value used: {1}".format(key, value))
                 self.env_strings += value
                 self.env_vars.append(key)
             
@@ -189,19 +188,19 @@ class env_encrypt:
             self.path_string += value
         
         if self.path_string != '':
-            print "[*] Path string used as part of key:", self.path_string
+            print("[*] Path string used as part of key:", self.path_string)
         else:
-            print "[!] Path string not used as pasrt of key"
+            print("[!] Path string not used as pasrt of key")
 
         if self.external_ip_mask != '':
-            print "[*] External IP mask used as part of key:", self.external_ip_mask
+            print("[*] External IP mask used as part of key:", self.external_ip_mask)
         else:
-            print "[!] External IP mask NOT used as part of key"
+            print("[!] External IP mask NOT used as part of key")
 
         if self.system_time != '':
-            print "[*] System time mask used as part of key:", self.system_time
+            print("[*] System time mask used as part of key:", self.system_time)
         else:
-            print "[!] System time mask NOT used as part of key"    
+            print("[!] System time mask NOT used as part of key")
 
     def pkcs7_encode(self, some_string):
         '''
@@ -219,17 +218,17 @@ class env_encrypt:
         
         # key == [env_strings][external_ip_mask][system_time][[path]OR[reg_path]]
 
-        self.key = self.env_strings + self.external_ip_mask + self.system_time
+        self.key = self.env_strings.encode('utf-8') + self.external_ip_mask.encode('utf-8') + self.system_time.encode('utf-8')
 
         if self.path_string != '':
             self.key += self.path_string
 
-        print '[*] String used to source the encryption key:', self.key
+        print('[*] String used to source the encryption key:', self.key)
 
         # Do a sha512 has of the key and trim the front 32 bytes
         
         key_iterations = self.key_iterations
-        print "[*] Applying %s sha512 hash iterations before encryption" % key_iterations
+        print("[*] Applying %s sha512 hash iterations before encryption" % key_iterations)
 
         while key_iterations > 1:
             self.key = hashlib.sha512(self.key).digest()
@@ -237,7 +236,7 @@ class env_encrypt:
             
         self.key = hashlib.sha512(self.key).digest()[:32]
         
-        print '[*] Encryption key:', self.key.encode('hex')
+        print('[*] Encryption key is done but we can\'t print it yet')
         self.iv = Random.new().read(AES.block_size)
         
         # Using CFB because we don't have to break it up by blocks or use padding
@@ -245,7 +244,7 @@ class env_encrypt:
             cipher = AES.new(self.key, AES.MODE_CFB, self.iv)
             
             self.encrypted_msg = cipher.encrypt(self.payload)
-            print '[*] Length of encrypted payload', len(self.encrypted_msg), 'and hash:', hashlib.sha512(self.encrypted_msg).hexdigest()
+            print('[*] Length of encrypted payload', len(self.encrypted_msg), 'and hash:', hashlib.sha512(self.encrypted_msg).hexdigest())
             self.lookup_table = zlib.compress(self.iv + self.encrypted_msg)
 
             # Encrypt payload payload for PYTHON ONLY
@@ -267,7 +266,7 @@ class env_encrypt:
             PADDING="{"
             self.b64_encoded_payload = base64.b64encode(self.payload)
             # Normally you don't have to pad CFB, but go is CFB128 -- python is CFB8
-            self.payload = self.b64_encoded_payload + (go_block_size - len(self.b64_encoded_payload) % go_block_size) * PADDING
+            self.payload = self.b64_encoded_payload + (go_block_size - len(self.b64_encoded_payload) % go_block_size) * b'PADDING'
             
             self.go_encrypted_msg = gocipher.encrypt(self.payload)
             
@@ -306,22 +305,22 @@ class env_encrypt:
         
         with open(r'./output/' + self.payload_name, 'w') as f:
             if "go_" in self.payload_name and self.cleanup:
-                print "[*] Removing Comments and Print Statements"
+                print("[*] Removing Comments and Print Statements")
                 self.payload_output = removeCommentsGo(self.payload_output,removePrint=True)
             elif "python_" in self.payload_name and self.cleanup:
-                print "[*] Removing Comments and Print Statements"
+                print("[*] Removing Comments and Print Statements")
                 self.payload_output = removeCommentsPy(self.payload_output,removePrint=True)
             elif self.payload_name and self.cleanup:
-                print "[!] Error Selecting Type of File for Cleaning : %s" % (self.payload_name)
+                print("[!] Error Selecting Type of File for Cleaning : %s" % (self.payload_name))
             f.write(self.payload_output)
 
     def gen_pyloader(self):
         
         self.payload_name = 'python_symmetric_' + os.path.basename(self.org_payload) + ".py"
-        print '[*] Payload hash (minus_bytes):', self.payload_hash
-        print '[*] Hash of full payload:', hashlib.sha512(self.payload).hexdigest()
+        print('[*] Payload hash (minus_bytes):', self.payload_hash)
+        print('[*] Hash of full payload:', hashlib.sha512(self.payload).hexdigest())
 
-        print "[*] Writing Python payload to:", self.payload_name
+        print("[*] Writing Python payload to:", self.payload_name)
         
         # Populate code to patch into build script
         if self.env_strings != '':
@@ -373,7 +372,7 @@ class env_encrypt:
         count = 0
         self.payload_name = 'go_symmetric_' + os.path.basename(self.org_payload) + '.go'
         
-        print '[*] Writing GO payload to:', self.payload_name
+        print('[*] Writing GO payload to:', self.payload_name)
 
         if self.env_strings != '':
             for item in go_environmentals.imports: self.import_set.add(item)
@@ -417,10 +416,10 @@ class env_encrypt:
 
     def gen_psloader(self):
         self.payload_name = 'powershell_symmetric_' + os.path.basename(self.org_payload) + ".ps1"
-        print '[*] Payload hash (minus_bytes):', self.payload_hash
-        print '[*] Hash of full payload:', hashlib.sha512(self.payload).hexdigest()
+        print('[*] Payload hash (minus_bytes):', self.payload_hash)
+        print('[*] Hash of full payload:', hashlib.sha512(self.payload).hexdigest())
 
-        print "[*] Writing Powershell payload to:", self.payload_name
+        print("[*] Writing Powershell payload to:", self.payload_name)
         
         # Populate code to patch into build script
         if self.env_strings != '':

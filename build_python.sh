@@ -19,7 +19,7 @@ cd /tmp/
 
 echo [*] Building...
 
-wine /root/.wine/drive_c/Python27/python.exe /usr/share/pyinstaller/pyinstaller.py -F -c $sans_extension.py
+pyinstaller -F -c $sans_extension.py
 
 cd - 1> /dev/null
 

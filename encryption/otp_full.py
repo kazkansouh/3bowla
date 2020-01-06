@@ -33,7 +33,7 @@ class otp_full:
     def __init__(self, pad, payload, byte_width, otp_type, payload_type, minus_bytes, scan_dir, output_type, pad_max,cleanup=False):
         self.org_payload = payload
         self.payload = open(payload, 'r').read()
-        print "[*] Payload length:", hex(len(self.payload))
+        print("[*] Payload length:", hex(len(self.payload)))
         self.payload_table = ''
         self.byte_width = int(byte_width)
         self.inital_iteration = 0
@@ -51,15 +51,15 @@ class otp_full:
 
         if output_type in ['python', 'both']:
             if 'dll' in self.payload_type.lower():
-                print "[X] No DLL Support for python"
+                print("[X] No DLL Support for python")
                 sys.exit(-1)
-        print "[*] Using the following as an OTP:", pad
+        print("[*] Using the following as an OTP:", pad)
         if pad_max.startswith("0x"):
             pad_max = int(pad_max, 16)
         if pad_max > 256 ** 3 - 1:
-            print "[!] That's too big of a pad or you don't speak hex or int"
+            print("[!] That's too big of a pad or you don't speak hex or int")
             pad_max = 256 ** 3 -1
-        print "[*] Using a maximum pad size of:", hex(pad_max)
+        print("[*] Using a maximum pad size of:", hex(pad_max))
         with open(pad, 'rb') as f:
             self.pad = f.read(pad_max)
         self.parse_binary()
@@ -74,23 +74,23 @@ class otp_full:
             self.gen_psloader()
 
     def set_payload(self):
-        print "[*] Payload_type", self.payload_type
+        print("[*] Payload_type", self.payload_type)
         if self.payload_type == "shellcode":
-            print '[*] Using shellcode payload template' 
+            print("[*] Using shellcode payload template")
             self.payload_loader = win_shellcode.loader
             self.go_payload_loader = go_win_shellcode.loader
             self.payload_imports = go_win_shellcode.imports
             self.ps_payload_loader = ps_win_shellcode.loader
 
         elif self.payload_type == "exe":
-            print '[*] Using EXE payload template' 
+            print('[*] Using EXE payload template')
             self.payload_loader = pe_exe.loader
             self.go_payload_loader = go_memorymodule.loader
             self.payload_imports = go_memorymodule.imports
             self.ps_payload_loader = ps_dll_exe.loader
 
         elif self.payload_type == "dll_x86":
-            print '[*] Using x86 dll payload template' 
+            print("[*] Using x86 dll payload template")
             #self.payload_loader = pe_dll_x86.loader
             self.go_payload_loader = go_memorymodule.loader
             self.payload_imports = go_memorymodule.imports
@@ -113,7 +113,7 @@ class otp_full:
                 filename, file_suffix = os.path.splitext(self.org_payload)
 
             self.file_suffix = file_suffix
-            print "suffix", self.file_suffix
+            print("suffix", self.file_suffix)
             self.payload_loader = drop_file.loader.format(self.file_suffix)
             #self.go_payload_loader = go_drop_file.loader
 
@@ -130,7 +130,7 @@ class otp_full:
         For encrypting the python payload with the OTP.
         Yes we're breaking the first rule of OTP club.
         '''
-        print "[*] Encrypting python loader code with OTP"
+        print("[*] Encrypting python loader code with OTP")
         position = 0
         payload_loader_table = ''
         
@@ -170,13 +170,13 @@ class otp_full:
         For encrypting the powershell payload with the OTP.
         Yes we're breaking the first rule of OTP club.
         '''
-        print "[*] Encrypting powershell loader code with OTP"
+        print("[*] Encrypting powershell loader code with OTP")
         position = 0
         payload_loader_table = ''
         
         while True:
             if position % 1000 == 0:
-                print "[*] Location in powershell loader: {0}".format(position)
+                print("[*] Location in powershell loader: {0}".format(position))
     
             if position >= len(self.ps_payload_loader):
                 break
@@ -218,10 +218,10 @@ class otp_full:
         while True:
             #Print status when building lookup table
             if self.position % 1000 == 0:
-                print "[*] Location in {0}: {1}".format(self.org_payload, self.position)
+                print("[*] Location in {0}: {1}".format(self.org_payload, self.position))
 
             if self.position >= self.first_amount and self.is_hashed is False:
-                    print "[*] Test hash amount:", self.first_amount, "at position:", self.position
+                    print("[*] Test hash amount:", self.first_amount, "at position:", self.position)
                     self.initial_iteration = len(self.payload_table) / 4
                     self.is_hashed = True
                     self.set_test_hash()
@@ -258,15 +258,15 @@ class otp_full:
                     break
 
         # Pre-pend initial_iteration
-        print "[*] Byte_width distribution:", record
-        print "[*] Prepending initial_iteration hash on the front of the lookup table"
+        print("[*] Byte_width distribution:", record)
+        print("[*] Prepending initial_iteration hash on the front of the lookup table")
         
-        print "[*] Size of OTP payload:", hex(len(self.payload_table))
+        print("[*] Size of OTP payload:", hex(len(self.payload_table)))
 
         if len(self.payload) - len(self.payload_table) < 0:
-            print "[!] No compression, gained %s in size from original payload" % hex(len(self.payload) - len(self.payload_table))
+            print("[!] No compression, gained %s in size from original payload" % hex(len(self.payload) - len(self.payload_table)))
         else:
-            print "[*] Compression effective, saved %s bytes in size from original payload" % hex(len(self.payload) - len(self.payload_table))
+            print("[*] Compression effective, saved %s bytes in size from original payload" % hex(len(self.payload) - len(self.payload_table)))
         
         if self.output_type != "powershell":
             self.lookup_table = zlib.compress(struct.pack("<I", self.initial_iteration) + self.payload_table)
@@ -281,19 +281,19 @@ class otp_full:
         
         with open(r'./output/' + self.payload_name, 'w') as f:
             if "go_" in self.payload_name and self.cleanup:
-                print "[*] Removing Comments and Print Statements"
+                print("[*] Removing Comments and Print Statements")
                 self.payload_output = removeCommentsGo(self.payload_output,removePrint=True)
             elif "python_" in self.payload_name and self.cleanup:
-                print "[*] Removing Comments and Print Statements"
+                print("[*] Removing Comments and Print Statements")
                 self.payload_output = removeCommentsPy(self.payload_output,removePrint=True)
             elif self.payload_name and self.cleanup:
-                print "[!] Error Selecting Type of File for Cleaning : %s" % (self.payload_name)
+                print("[!] Error Selecting Type of File for Cleaning : %s" % (self.payload_name))
             f.write(self.payload_output)
 
     def gen_pyloader(self):
-        print "[*] Python payload hash (minus_bytes):", self.payload_hash
+        print("[*] Python payload hash (minus_bytes):", self.payload_hash)
         self.payload_name = 'python_otp_full_' + os.path.basename(self.org_payload) + ".py"
-        print "[*] Writing Python payload to:", self.payload_name
+        print("[*] Writing Python payload to:", self.payload_name)
         
         self.payload_output = otp_full_base.buildcode.format(base64.b64encode(self.lookup_table), self.payload_hash, 
                                                              self.iterumhash, self.minus_bytes, self.loader_lookup_table, 
@@ -321,9 +321,9 @@ class otp_full:
             for item in self.payload_imports: self.import_set.add(item)
 
         self.payload_name = "go_otp_full_" + os.path.basename(self.org_payload) + ".go"
-        print '[*] GO Payload hash (minus_bytes):', self.payload_hash
-        print '[*] GO Payload hash of full payload:', hashlib.sha512(self.payload).hexdigest()
-        print '[*] Writing GO payload to:', self.payload_name
+        print('[*] GO Payload hash (minus_bytes):', self.payload_hash)
+        print('[*] GO Payload hash of full payload:', hashlib.sha512(self.payload).hexdigest())
+        print('[*] Writing GO payload to:', self.payload_name)
         
         go_imports = ''
         
@@ -337,9 +337,9 @@ class otp_full:
 
     def gen_psloader(self):
         self.payload_name = 'powershell_otp_full_' + os.path.basename(self.org_payload) + ".ps1"
-        print '[*] PS Payload hash (minus_bytes):', self.payload_hash
-        print '[*] PS Hash of full payload:', hashlib.sha512(self.payload).hexdigest()
-        print "[*] Writing PS payload to:", self.payload_name
+        print('[*] PS Payload hash (minus_bytes):', self.payload_hash)
+        print('[*] PS Hash of full payload:', hashlib.sha512(self.payload).hexdigest())
+        print('[*] Writing PS payload to:", self.payload_name')
         
         self.payload_output = ps_otp_full_base.buildcode.format(base64.b64encode(self.lookup_table), self.payload_hash, self.iterumhash,
                                                              self.loader_lookup_table, self.minus_bytes, self.scan_dir)

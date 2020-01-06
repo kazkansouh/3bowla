@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from pyparsing import cppStyleComment,dblQuotedString
 import re
@@ -74,7 +74,7 @@ import "C"
 			myOut.write(returnStr)
 			myOut.close()
 		except:
-			print "[!] Can not write output file"
+			print("[!] Can not write output file")
 	else:
 		return returnStr
 
@@ -102,7 +102,7 @@ def removeCommentsPy(fStr,fName='',removePrint=False):
 			myOut.write(returnStr)
 			myOut.close()
 		except:
-			print "[!] Can not write output file"
+			print("[!] Can not write output file")
 	else:
 		return returnStr
 
@@ -110,9 +110,9 @@ def removeCommentsPy(fStr,fName='',removePrint=False):
 if __name__ == "__main__":
 
 	if len(sys.argv) != 3:
-		print "This tool requires a file name and language type (GO / PY)"
-		print "%s big_file.py PY" % sys.argv[0]
-		print "%s small_file.go GO" % sys.argv[0]
+		print("This tool requires a file name and language type (GO / PY)")
+		print("%s big_file.py PY" % sys.argv[0])
+		print("%s small_file.go GO" % sys.argv[0])
 		exit(-1)
 
 	try:
@@ -120,12 +120,12 @@ if __name__ == "__main__":
 		fStr = myFile.read()
 		myFile.close()
 	except:
-		print "Error Opening File to Read: %s" % (sys.argv[1])
+		print("Error Opening File to Read: %s" % (sys.argv[1]))
 		exit(-1)
 
 	if 'go' in sys.argv[2].lower():
-		print "[*] Cleaning GO File: %s" % sys.argv[1]
+		print("[*] Cleaning GO File: %s" % sys.argv[1])
 		removeCommentsGo(fStr,sys.argv[1],removePrint=True)
 	else:
 		removeCommentsPy(fStr, sys.argv[1],removePrint=True)
-		print "[*] Cleaning PY File: %s" % sys.argv[1]
+		print("[*] Cleaning PY File: %s" % sys.argv[1])
