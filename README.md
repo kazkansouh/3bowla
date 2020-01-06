@@ -1,5 +1,6 @@
-# Ebowla Fork to add Python3 Support
-## project is currently ongoing, so obviously not everything works (honestly nothing really works)
+# 3 B O W L A
+## Ebowla Fork to add Python3 Support
+### project is currently ongoing, so obviously not everything works (honestly nothing really works)
 
 buuuuuut if the output type is set to GO in the generic config, all compatible payload types will work (we think... maybe)
 
