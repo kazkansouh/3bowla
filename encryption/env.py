@@ -54,7 +54,7 @@ class env_encrypt:
         self.minus_bytes = int(minus_bytes)
         self.key_iterations = int(key_iterations)
         self.output_type = output_type
-        self.payload_loader = ''
+        self.payload_loader = b''
         self.payload_stack = ''
         self.payload_call_stack = ''
         self.go_payload_loader = ''
@@ -248,7 +248,7 @@ class env_encrypt:
             self.lookup_table = zlib.compress(self.iv + self.encrypted_msg)
 
             # Encrypt payload payload for PYTHON ONLY
-            self.payload_loader = base64.b64encode(zlib.compress(cipher.encrypt(self.payload_loader)))
+            self.payload_loader = base64.b64encode(zlib.compress(cipher.encrypt(self.payload_loader.encode())))
             
         # Gen go formated AES cipher
         elif self.output_type == 'go':

