@@ -2,16 +2,9 @@
 ## Ebowla Fork to add Python3 Support
 ### project is currently ongoing, so obviously not everything works (honestly nothing really works)
 
-buuuuuut if the output type is set to GO in the generic config, all compatible payload types will work (we think... maybe)
+buuuuuut if the output type is set to GO in the generic config, all compatible payload types will work (we think... maybe). What follows here definitely works and the other functionalities will follow asap. Cheers!
 
-# ABOUT EBOWLA AND HOW TO USE IT
-## framework for building environmental keyed payloads
-
-### Get EBOWLA
-
-```git clone https://github.com/Genetic-Malware/Ebowla```
-
-```cd Ebowla```
+## How to use it (if you don't know how to use Ebowla yet)
 
 ### edit generic.config:
 
@@ -32,7 +25,7 @@ Make, as an example, a reverse shell payload with metersploit:
 
 ### build executable with Ebowla
 
-```python2 ebowla.py shell.exe genetic.config```
+```python3 ebowla.py shell.exe genetic.config```
 
 ![](https://raw.githubusercontent.com/ohoph/cheatsheats/master/ebowla/images/2019-12-13_09-42.png?token=ANDZTD52FKYQIOMKV3RBKUC56NLDI)
 
