@@ -19,13 +19,12 @@ class make_payload():
         self.lookup_table = ''
         self.inital_iteration = 0
         self.config = ConfigObj(config)
-        #print self.payload.encode('hex')
-    #    self.parse_config()
+        self.parse_config()
         self.main()
 
     def parse_config(self):
-       for item in self.config.encode('utf-8'):
-            #print item, ":", self.config[item]
+       for item in self.config:
+            print(item, ":", self.config[item])
             pass
 
     def main(self):
