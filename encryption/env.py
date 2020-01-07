@@ -236,7 +236,7 @@ class env_encrypt:
             
         self.key = hashlib.sha512(self.key).digest()[:32]
         
-        print('[*] Encryption key is done but we can\'t print it yet')
+        print('[*] Encryption key is: ' + binascii.hexlify(self.key).decode('utf-8'))
         self.iv = Random.new().read(AES.block_size)
         
         # Using CFB because we don't have to break it up by blocks or use padding
