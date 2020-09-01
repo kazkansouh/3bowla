@@ -73,3 +73,8 @@ genetic.config
 broken_*
 output*
 pads*
+
+*exe
+*dll
+*~
+flymd.*
