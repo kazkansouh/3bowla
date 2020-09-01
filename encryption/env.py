@@ -140,7 +140,7 @@ class env_encrypt:
         self.env_vars = []
         
         self.used_path_string = {}
-        self.path_string = ''.encode('utf-8')
+        self.path_string = ''
         
         self.start_loc = ''
 
@@ -263,10 +263,10 @@ class env_encrypt:
                 segment_size=go_block_size
             )
 
-            PADDING="{"
+            PADDING=b'{'
             self.b64_encoded_payload = base64.b64encode(self.payload)
             # Normally you don't have to pad CFB, but go is CFB128 -- python is CFB8
-            self.payload = self.b64_encoded_payload + (go_block_size - len(self.b64_encoded_payload) % go_block_size) * b'PADDING'
+            self.payload = self.b64_encoded_payload + (go_block_size - len(self.b64_encoded_payload) % go_block_size) * PADDING
             
             self.go_encrypted_msg = gocipher.encrypt(self.payload)
             
@@ -406,11 +406,13 @@ class env_encrypt:
         for item in self.import_set:         
             go_imports += "\"" + item + "\"\n\t"
 
-        self.payload_output = go_env_base.buildcode.format(base64.b64encode(self.go_lookup_table), self.payload_hash, 
-                                                             self.minus_bytes, self.go_payload_loader, 
-                                                             self.start_loc, self.go_payload_stack, 
-                                                             self.go_payload_call_stack, count, go_imports,
-                                                             self.key_iterations,int(self.key_iterations))
+        self.payload_output = go_env_base.buildcode.format(
+            base64.b64encode(self.go_lookup_table).decode('utf8'),
+            self.payload_hash,
+            self.minus_bytes, self.go_payload_loader,
+            self.start_loc, self.go_payload_stack,
+            self.go_payload_call_stack, count, go_imports,
+            self.key_iterations,int(self.key_iterations))
         self.write_payload()
 
 
