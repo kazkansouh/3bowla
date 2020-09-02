@@ -29,8 +29,17 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <tchar.h>
+#define DEBUG_OUTPUT
 #ifdef DEBUG_OUTPUT
-#include <stdio.h>
+  #include <stdio.h>
+  #define PRINTF(...) do {printf(__VA_ARGS__); fflush(stdout);} while (0);
+  #if __x86_64__
+    #define FMT "I64"
+  #else
+    #define FMT
+  #endif
+#else
+  #define PRINTF(...)
 #endif
 
 #if _MSC_VER
@@ -78,18 +87,25 @@ typedef struct {
 
 #ifdef DEBUG_OUTPUT
 static void
-OutputLastError(const char *msg)
-{
-    LPVOID tmp;
-    char *tmpmsg;
-    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&tmp, 0, NULL);
-    tmpmsg = (char *)LocalAlloc(LPTR, strlen(msg) + strlen(tmp) + 3);
-    sprintf(tmpmsg, "%s: %s", msg, tmp);
-    OutputDebugString(tmpmsg);
-    LocalFree(tmpmsg);
-    LocalFree(tmp);
+OutputLastError(const char *msg) {
+  LPTSTR tmp;
+  char *tmpmsg;
+  FormatMessage(
+      FORMAT_MESSAGE_ALLOCATE_BUFFER
+      | FORMAT_MESSAGE_FROM_SYSTEM
+      | FORMAT_MESSAGE_IGNORE_INSERTS,
+      NULL,
+      GetLastError(),
+      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+      (LPTSTR)&tmp, 0, NULL);
+  tmpmsg = (char *)LocalAlloc(LPTR, strlen(msg) + strlen(tmp) + 3);
+  sprintf(tmpmsg, "%s: %s", msg, tmp);
+  puts(tmpmsg);
+  LocalFree(tmpmsg);
+  LocalFree(tmp);
 }
+#else
+#define OutputLastError(x)
 #endif
 
 static BOOL
@@ -218,10 +234,8 @@ FinalizeSection(PMEMORYMODULE module, PSECTIONFINALIZEDATA sectionData) {
 
     // change memory access flags
     if (VirtualProtect(sectionData->address, sectionData->size, protect, &oldProtect) == 0) {
-#ifdef DEBUG_OUTPUT
-        OutputLastError("Error protecting memory page")
-#endif
-        return FALSE;
+      OutputLastError("Error protecting memory page");
+      return FALSE;
     }
 
     return TRUE;
@@ -283,24 +297,39 @@ FinalizeSections(PMEMORYMODULE module)
 }
 
 static BOOL
-ExecuteTLS(PMEMORYMODULE module)
+ExecuteTLS(PMEMORYMODULE module, ptrdiff_t delta)
 {
     unsigned char *codeBase = module->codeBase;
     PIMAGE_TLS_DIRECTORY tls;
     PIMAGE_TLS_CALLBACK* callback;
 
+    PRINTF("T.1\n");
     PIMAGE_DATA_DIRECTORY directory = GET_HEADER_DICTIONARY(module, IMAGE_DIRECTORY_ENTRY_TLS);
     if (directory->VirtualAddress == 0) {
         return TRUE;
     }
-
+    PRINTF("T.2\n");
     tls = (PIMAGE_TLS_DIRECTORY) (codeBase + directory->VirtualAddress);
+    PRINTF("T.3\n");
     callback = (PIMAGE_TLS_CALLBACK *) tls->AddressOfCallBacks;
+    PRINTF("T.4\n");
     if (callback) {
-        while (*callback) {
-            (*callback)((LPVOID) codeBase, DLL_PROCESS_ATTACH, NULL);
-            callback++;
-        }
+      //while (*(PIMAGE_TLS_CALLBACK*)((void*)callback + delta)) {
+      while (*callback) {
+        PRINTF("T.5 %p\n", callback);
+        /*
+        PRINTF("T.5 %p\n", callback);
+        //PRINTF("T.6 %p, %p\n", callback, *callback);
+        callback = (PIMAGE_TLS_CALLBACK*)((void*)callback + delta);
+        PRINTF("T.6 %p\n", callback);
+        PRINTF("T.6 %p\n", *callback);
+        *callback = ((PIMAGE_TLS_CALLBACK)((void*)(*callback) + delta));
+        PRINTF("T.6 patched %p\n", *callback);*/
+        (*callback)((LPVOID) codeBase, DLL_PROCESS_ATTACH, NULL);
+        PRINTF("T.7\n");
+        callback++;
+      }
+      PRINTF("T.8\n");
     }
     return TRUE;
 }
@@ -353,7 +382,7 @@ PerformBaseRelocation(PMEMORYMODULE module, ptrdiff_t delta)
 #endif
 
             default:
-                //printf("Unknown relocation: %d\n", type);
+                //PRINTF("Unknown relocation: %d\n", type);
                 break;
             }
         }
@@ -476,15 +505,18 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
     size_t lastSectionEnd = 0;
     size_t alignedImageSize;
 
+    PRINTF("A\n");
     if (!CheckSize(size, sizeof(IMAGE_DOS_HEADER))) {
         return NULL;
     }
+    PRINTF("B\n");
     dos_header = (PIMAGE_DOS_HEADER)data;
     if (dos_header->e_magic != IMAGE_DOS_SIGNATURE) {
         SetLastError(ERROR_BAD_EXE_FORMAT);
         return NULL;
     }
 
+    PRINTF("C\n");
     if (!CheckSize(size, dos_header->e_lfanew + sizeof(IMAGE_NT_HEADERS))) {
         return NULL;
     }
@@ -494,6 +526,7 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
         return NULL;
     }
 
+    PRINTF("D\n");
 #ifdef _WIN64
     if (old_header->FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64) {
 #else
@@ -503,12 +536,14 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
         return NULL;
     }
 
+    PRINTF("E\n");
     if (old_header->OptionalHeader.SectionAlignment & 1) {
         // Only support section alignments that are a multiple of 2
         SetLastError(ERROR_BAD_EXE_FORMAT);
         return NULL;
     }
 
+    PRINTF("F\n");
     section = IMAGE_FIRST_SECTION(old_header);
     optionalSectionSize = old_header->OptionalHeader.SectionAlignment;
     for (i=0; i<old_header->FileHeader.NumberOfSections; i++, section++) {
@@ -525,6 +560,7 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
         }
     }
 
+    PRINTF("G %lx\n", old_header->OptionalHeader.SizeOfImage);
     GetNativeSystemInfo(&sysInfo);
     alignedImageSize = ALIGN_VALUE_UP(old_header->OptionalHeader.SizeOfImage, sysInfo.dwPageSize);
     if (alignedImageSize != ALIGN_VALUE_UP(lastSectionEnd, sysInfo.dwPageSize)) {
@@ -535,23 +571,28 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
     // reserve memory for image of library
     // XXX: is it correct to commit the complete memory region at once?
     //      calling DllEntry raises an exception if we don't...
-    code = (unsigned char *)VirtualAlloc((LPVOID)(old_header->OptionalHeader.ImageBase),
+    code = (unsigned char *)VirtualAlloc(
+        (LPVOID)(old_header->OptionalHeader.ImageBase),
         alignedImageSize,
         MEM_RESERVE | MEM_COMMIT,
         PAGE_READWRITE);
 
+    PRINTF("H desiredbase=%p, ok?=%p\n",
+           (void*)old_header->OptionalHeader.ImageBase, code);
     if (code == NULL) {
-        // try to allocate memory at arbitrary position
-        code = (unsigned char *)VirtualAlloc(NULL,
-            alignedImageSize,
-            MEM_RESERVE | MEM_COMMIT,
-            PAGE_READWRITE);
-        if (code == NULL) {
-            SetLastError(ERROR_OUTOFMEMORY);
-            return NULL;
-        }
+      // try to allocate memory at arbitrary position
+      code = (unsigned char *)VirtualAlloc(
+          NULL,
+          alignedImageSize,
+          MEM_RESERVE | MEM_COMMIT,
+          PAGE_READWRITE);
+      if (code == NULL) {
+        SetLastError(ERROR_OUTOFMEMORY);
+        return NULL;
+      }
     }
 
+    PRINTF("I baseaddress=%p, imagesize=%" FMT "x\n", code, alignedImageSize);
     result = (PMEMORYMODULE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(MEMORYMODULE));
     if (result == NULL) {
         VirtualFree(code, 0, MEM_RELEASE);
@@ -559,6 +600,7 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
         return NULL;
     }
 
+    PRINTF("J\n");
     result->codeBase = code;
     result->isDLL = (old_header->FileHeader.Characteristics & IMAGE_FILE_DLL) != 0;
     result->loadLibrary = loadLibrary;
@@ -567,10 +609,12 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
     result->userdata = userdata;
     result->pageSize = sysInfo.dwPageSize;
 
+    PRINTF("K: isDLL=%d\n", result->isDLL);
     if (!CheckSize(size, old_header->OptionalHeader.SizeOfHeaders)) {
         goto error;
     }
 
+    PRINTF("L\n");
     // commit memory for headers
     headers = (unsigned char *)VirtualAlloc(code,
         old_header->OptionalHeader.SizeOfHeaders,
@@ -584,11 +628,13 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
     // update position
     result->headers->OptionalHeader.ImageBase = (uintptr_t)code;
 
+    PRINTF("M\n");
     // copy sections from DLL file block to new memory location
     if (!CopySections((const unsigned char *) data, size, old_header, result)) {
         goto error;
     }
 
+    PRINTF("N\n");
     // adjust base address of imported data
     locationDelta = (ptrdiff_t)(result->headers->OptionalHeader.ImageBase - old_header->OptionalHeader.ImageBase);
     if (locationDelta != 0) {
@@ -597,22 +643,26 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
         result->isRelocated = TRUE;
     }
 
+    PRINTF("O isRelocated=%d [%" FMT "x]\n", result->isRelocated, locationDelta);
     // load required dlls and adjust function table of imports
     if (!BuildImportTable(result)) {
         goto error;
     }
 
+    PRINTF("P\n");
     // mark memory pages depending on section headers and release
     // sections that are marked as "discardable"
     if (!FinalizeSections(result)) {
         goto error;
     }
 
+    PRINTF("Q\n");
     // TLS callbacks are executed BEFORE the main loading
-    if (!ExecuteTLS(result)) {
+    if (!ExecuteTLS(result, locationDelta)) {
         goto error;
     }
 
+    PRINTF("R\n");
     // get entry point of loaded library
     if (result->headers->OptionalHeader.AddressOfEntryPoint != 0) {
         if (result->isDLL) {
@@ -625,7 +675,11 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
             }
             result->initialized = TRUE;
         } else {
-            result->exeEntry = (ExeEntryProc)(LPVOID)(code + result->headers->OptionalHeader.AddressOfEntryPoint);
+          result->exeEntry = (ExeEntryProc)(LPVOID)(code + result->headers->OptionalHeader.AddressOfEntryPoint);
+          PRINTF("Q entry=%08lx, relo_entry=%p\n",
+                 result->headers->OptionalHeader.AddressOfEntryPoint,
+                 result->exeEntry);
+          PRINTF("%08x\n", *((unsigned int*)result->exeEntry));
         }
     } else {
         result->exeEntry = NULL;
@@ -634,6 +688,7 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
     return (HMEMORYMODULE)result;
 
 error:
+    PRINTF("ErRoR\n");
     // cleanup
     MemoryFreeLibrary(result);
     return NULL;
